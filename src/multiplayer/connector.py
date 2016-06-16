@@ -125,7 +125,7 @@ class SocketConnector(object):
 
         data_received = {}
 
-        for address, client in self.connections.iteritems():
+        for address, client in self.connections.items():
             current_data = ""
 
             while True:
@@ -146,6 +146,10 @@ class SocketConnector(object):
                 break
 
             data_received[address] = current_data.split("\n")
+
+        for address, items in data_received.items():
+            for item in items:
+                print "{} -- {}".format(address, item)
 
         return data_received
 

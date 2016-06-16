@@ -45,12 +45,12 @@ class DMGPMultiplayer(object):
         """This is the funciton that parses DMGP data received via a client.
         It does not work alone; it is passed to the socket connector as a receiving function!"""
 
-        def send_back(data, blocking=True):
-            self.connector.send_data(address, data, blocking)
+        def send_back(data_to_send, blocking=True):
+            self.connector.send_data(address, data_to_send, blocking)
 
-        def send_to_all(data, blocking=True):
+        def send_to_all(data_to_send, blocking=True):
             for client in self.connector.connections.keys():
-                self.connector.send_data(client, data, blocking)
+                self.connector.send_data(client, data_to_send, blocking)
 
         for line in data:
             if line == "":
