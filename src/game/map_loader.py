@@ -44,7 +44,10 @@ def load_map(filename="intro"):
 
     top_left = data_unpacker.read_format("2l")
     map_width, map_height = data_unpacker.read_format("2l")
+    current_map["exit"] = data_unpacker.read_format("2l")
     current_parsing_position = (top_left[0], top_left[1])
+    next_map_name_size = data_unpacker.read_format("I")
+    current_map["next_map"] = data_unpacker.read_format(str(next_map_name_size) + "s")
 
     while True:
         try:
@@ -61,10 +64,10 @@ def load_map(filename="intro"):
                     current_parsing_position[1] += 1
 
             elif byte_kind == 1:
-                current_map["tiles"].append(data_unpacker.read_format("2l"))
+                current_map["tiles"].append(current_parsing_position)
 
             elif byte_kind == 2:
-                current_map["player_starts"].append(data_unpacker.read_format("2l"))
+                current_map["player_starts"].append(current_parsing_position)
 
             else:
                 continue

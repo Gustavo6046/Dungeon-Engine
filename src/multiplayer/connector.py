@@ -130,9 +130,8 @@ class SocketConnector(object):
         data_received = {}
 
         for address, client in self.connections.items():
-            current_data = ""
-
             def this_loop():
+                current_data = ""
                 while True:
                     try:
                         current_data += client.recv(4096)
@@ -142,7 +141,7 @@ class SocketConnector(object):
                             print "Connection Error! Receiving data from {} aborted! ({})".format(address,
                                                                                                   errno.errorcode(
                                                                                                       error_code.errno))
-                            return True
+                            return 1
 
                         if error_code in (errno.EAGAIN, errno.EINPROGRESS):
                             continue
@@ -152,9 +151,11 @@ class SocketConnector(object):
 
                     break
 
-                return False
+                return current_data
 
-            if this_loop():
+            current_data = this_loop()
+
+            if current_data == 1:
                 continue
 
             data_received[address] = current_data.split("\n")

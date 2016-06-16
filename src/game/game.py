@@ -3,12 +3,12 @@ import random
 import map_loader
 
 
-def clamp_number(num, min, max):
-    if num < min:
-        num = min
+def clamp_number(num, min_number, max_number):
+    if num < min_number:
+        num = min_number
 
-    if num > max:
-        num = max
+    if num > max_number:
+        num = max_number
 
     return num
 
@@ -29,6 +29,10 @@ class Player(object):
             self.coordinates = old_coordinates
             print "Impossible move into solid tile at {},{}!".format(*self.coordinates)
 
+        if self.coordinates == self.game.map["exit"]:
+            print "Congratulations! You found the exit!"
+            self.game.change_map(self.game.map["next_map"])
+
         print "Moved succesfully into square {},{}!".format(*self.coordinates)
 
     def __del__(self):
@@ -36,8 +40,8 @@ class Player(object):
 
 
 class Game(object):
-    def __init__(self, map, players):
-        self.map = map
+    def __init__(self, map_dict, players=[]):
+        self.map = map_dict
         self.player_list = players
 
     def change_map(self, map_filename):
