@@ -5,6 +5,10 @@ import threading
 import time
 
 
+class ConnectionTerminated(BaseException):
+    pass
+
+
 class SocketConnector(object):
     def __init__(self, port):
         self.connections = {}
@@ -104,7 +108,7 @@ class SocketConnector(object):
                                 errno.ECONNREFUSED, errno.ECONNABORTED, errno.ECONNRESET, errno.ETIMEDOUT):
                             print "Connection Error! Sending data to {} aborted! ({})".format(data, errno.errorcode(
                                 error_code.errno))
-                            return 1
+                            raise ConnectionTerminated
 
                         if error_code.errno in (errno.EAGAIN, errno.EINPROGRESS, errno.EBUSY):
                             continue
@@ -117,7 +121,7 @@ class SocketConnector(object):
 
         except KeyError:
             print "Warning: Address \'{}\' not found in connection list!".format(address)
-            return 2
+            return 1
 
     def receive_data(self):
         """Will return a list of data received from all clients.
@@ -128,22 +132,30 @@ class SocketConnector(object):
         for address, client in self.connections.items():
             current_data = ""
 
-            while True:
-                try:
-                    current_data += client.recv(4096)
+            def this_loop():
+                while True:
+                    try:
+                        current_data += client.recv(4096)
 
-                except socket.error as error_code:
-                    if error_code in (errno.ECONNREFUSED, errno.ECONNABORTED, errno.ECONNRESET, errno.ETIMEDOUT):
-                        print "Connection Error! Receiving data from {} aborted! ({})".format(address, errno.errorcode(
-                            error_code.errno))
+                    except socket.error as error_code:
+                        if error_code in (errno.ECONNREFUSED, errno.ECONNABORTED, errno.ECONNRESET, errno.ETIMEDOUT):
+                            print "Connection Error! Receiving data from {} aborted! ({})".format(address,
+                                                                                                  errno.errorcode(
+                                                                                                      error_code.errno))
+                            return True
 
-                    if error_code in (errno.EAGAIN, errno.EINPROGRESS):
+                        if error_code in (errno.EAGAIN, errno.EINPROGRESS):
+                            continue
+
+                    if not current_data.endswith("\n"):
                         continue
 
-                if not current_data.endswith("\n"):
-                    continue
+                    break
 
-                break
+                return False
+
+            if this_loop():
+                continue
 
             data_received[address] = current_data.split("\n")
 

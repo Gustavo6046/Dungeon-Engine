@@ -17,7 +17,7 @@ class DMGPMultiplayer(object):
         self.game = game
         self.host_address = None
         self.configurations = ConfigParser.ConfigParser()
-        self.configurations.read(tuple(["config\\" + config for config in sys.argv[1:]]))
+        self.configurations.read(tuple(["config\\{}.ini".format(config) for config in sys.argv[1:]]))
         self.port = self.configurations.getint("Network", "MinPort")
         self.use_ssl = self.configurations.getboolean("Network", "UseSSL")
         self.timeout = self.configurations.getfloat("Network", "Timeout")
@@ -52,52 +52,57 @@ class DMGPMultiplayer(object):
             for client in self.connector.connections.keys():
                 self.connector.send_data(client, data_to_send, blocking)
 
-        for line in data:
-            if line == "":
-                continue
+        try:
+            for line in data:
+                if line == "":
+                    continue
 
-            if line.upper().startswith("CONNECTEDCLIENTS "):
-                for ip, port in [x.split(" ") for x in line.split(" ")[1:]]:
-                    if "{}:{}".format(ip, port) not in self.connector.connections.keys():
-                        self.connect_to(ip, port)
-                        send_back("CONNECTEDTO {}:{}".format(ip, port))
+                if line.upper().startswith("CONNECTEDCLIENTS "):
+                    for ip, port in [x.split(" ") for x in line.split(" ")[1:]]:
+                        if "{}:{}".format(ip, port) not in self.connector.connections.keys():
+                            self.connect_to(ip, port)
+                            send_back("CONNECTEDTO {}:{}".format(ip, port))
 
-            if line.upper().startswith("IAMHOST "):
-                if self.host_address:
-                    send_back("ERR HOST_EXISTING")
+                if line.upper().startswith("IAMHOST "):
+                    if self.host_address:
+                        send_back("ERR HOST_EXISTING")
 
-                else:
-                    send_back("INFO HOST_SUCCESFULLY_DEFINED")
-                    send_to_all("DEFHOST " + address)
+                    else:
+                        send_back("INFO HOST_SUCCESFULLY_DEFINED")
+                        send_to_all("DEFHOST " + address)
 
-            if line.upper().startswith("DEFHOST "):
-                if self.host_address:
-                    send_back("ERR HOST_EXISTING")
+                if line.upper().startswith("DEFHOST "):
+                    if self.host_address:
+                        send_back("ERR HOST_EXISTING")
 
-                else:
-                    send_back("INFO HOST_SUCCESFULLY_DEFINED")
+                    else:
+                        send_back("INFO HOST_SUCCESFULLY_DEFINED")
 
-            if line.upper() == "AMIHOST":
-                if self.host_address == address:
-                    send_back("INFO IS_HOST TRUE")
+                if line.upper() == "AMIHOST":
+                    if self.host_address == address:
+                        send_back("INFO IS_HOST TRUE")
 
-                else:
-                    send_back("INFO IS_HOST FALSE")
+                    else:
+                        send_back("INFO IS_HOST FALSE")
 
-            if line.upper().startswith("CTCP"):
-                ctcp = line.split(" ")[1]
+                if line.upper().startswith("CTCP"):
+                    ctcp = line.split(" ")[1]
 
-                if ctcp.upper() == "WHOISHOST":
-                    send_back("INFO HOST " + self.host_address)
+                    if ctcp.upper() == "WHOISHOST":
+                        send_back("INFO HOST " + self.host_address)
 
-                if ctcp.upper() == "TIME":
-                    send_back("INFO TIME " + str(time.time()))
+                    if ctcp.upper() == "TIME":
+                        send_back("INFO TIME " + str(time.time()))
 
-                if ctcp.upper() == "RUNTIME":
-                    send_back("INFO RUNTIME " + str(time.time() - self.starting_time))
+                    if ctcp.upper() == "RUNTIME":
+                        send_back("INFO RUNTIME " + str(time.time() - self.starting_time))
 
-                if ctcp.upper() == "STARTTIME":
-                    send_back("INFO STARTTIME " + str(self.starting_time))
+                    if ctcp.upper() == "STARTTIME":
+                        send_back("INFO STARTTIME " + str(self.starting_time))
 
-                else:
-                    send_back("ERR UNKNOWN_CTCP_TYPE")
+                    else:
+                        send_back("ERR UNKNOWN_CTCP_TYPE")
+
+        except connector.ConnectionTerminated:
+            # TO-DO: Add connection termination handler
+            pass
