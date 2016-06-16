@@ -1,6 +1,6 @@
 import errno
-import ssl
 import socket
+import ssl
 import threading
 import time
 
@@ -30,7 +30,8 @@ class SocketConnector(object):
                 if error.errno in (errno.EAGAIN, errno.EINPROGRESS):
                     continue
 
-                print "Listening thread error! ({})".format(errno.errorcode[error.errno])
+                print "Listening thread socket error! ({})".format(errno.errorcode[error.errno])
+                return
 
             self.connections["{}:{}".format(ip, port)] = client
 
@@ -68,7 +69,7 @@ class SocketConnector(object):
         self.connections["{}:{}".format(ip, port)] = {"socket": new_socket, "ssl": use_ssl}
 
         for message in connection_messages:
-            self.send_data("{}:{}".format(ip, port), message, data_modifiers=self.modifiers)
+            self.send_data("{}:{}".format(ip, port), message)
 
     def send_data(self, address, data, blocking=True):
         """Will handle sending data to the socket of corresponding address in the connections list."""

@@ -1,9 +1,8 @@
-import json
-import socket
-import connector
 import ConfigParser
 import sys
 import time
+
+import connector
 
 
 class NoConfigurationError(BaseException):
@@ -18,7 +17,7 @@ class DMGPMultiplayer(object):
         self.game = game
         self.host_address = None
         self.configurations = ConfigParser.ConfigParser()
-        self.configurations.read(sys.argv)
+        self.configurations.read(tuple(["config\\" + config for config in sys.argv[1:]]))
         self.port = self.configurations.getint("Network", "MinPort")
         self.use_ssl = self.configurations.getboolean("Network", "UseSSL")
         self.timeout = self.configurations.getfloat("Network", "Timeout")
@@ -26,7 +25,7 @@ class DMGPMultiplayer(object):
             port=self.port,
             use_ssl=self.use_ssl,
             timeout_seconds=self.timeout,
-            helper_id="Dungeon Engine Connection @ Port " + str(self.configurations.getint("Network", "MinPort"))
+            helper_id="Dungeon Engine Connection @ Port " + str(self.port)
         )
         self.connector.register_receive_function(self.parse_dmgp)
 
