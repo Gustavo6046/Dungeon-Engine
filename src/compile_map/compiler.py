@@ -49,15 +49,16 @@ def compile_map(map_filename="current.dam", compiled_filename="result.dbm"):
 
     result_map = open(compiled_filename, "a")
     result_map.write(struct.pack("11s", "DUNGEON_MAP"))
-    result_map.write(struct.pack("6l", leftmost, bottom, rightmost - leftmost, top - bottom, map_dict["exit"][0],
+    result_map.write(struct.pack("6l", leftmost, bottom, rightmost - leftmost, bottom - top, map_dict["exit"][0],
                                  map_dict["exit"][1]))
     result_map.write(struct.pack("I", struct.calcsize(str(len(map_dict["next_map"])) + "s")))
     result_map.write(
         struct.pack(str(struct.calcsize(str(len(map_dict["next_map"])) + "s")) + "s", map_dict["next_map"]))
 
-    for y in xrange(leftmost, rightmost):
-        for x in xrange(leftmost, rightmost):
+    for x in xrange(leftmost, rightmost):
+        for y in xrange(top, bottom):
             if (x, y) in map_dict["tiles"]:
+                print "Tile at {},{}!".format(x, y)
                 result_map.write(struct.pack("B", 1))
 
             if (x, y) in map_dict["player_starts"]:
