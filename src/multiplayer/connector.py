@@ -10,36 +10,48 @@ class ConnectionTerminated(BaseException):
 
 
 class SocketConnector(object):
-    def __init__(self, port):
+    def __init__(self, port, timeout_seconds=120, connection_messages=(), use_ssl=False):
         self.connections = {}
         self.our_port = port
         self.data_modifiers = []
+        self.connection_messages = connection_messages
+        self.timeout_seconds = timeout_seconds
 
-        threading.Thread(name="Connector Listening Loop", target=self.listening_loop).start()
+        threading.Thread(name="Connector Listening Loop", target=self.listening_loop, args=(use_ssl,)).start()
 
     def register_sent_data_modifier(self, func):
         self.data_modifiers.append(func)
 
-    def listening_loop(self):
+    def listening_loop(self, use_ssl=False):
         listening_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        listening_socket.listen(2)
         listening_socket.bind(("localhost", self.our_port))
-        listening_socket.setblocking(False)
+        listening_socket.listen(8)
+
+        if use_ssl:
+            ssl.wrap_socket(listening_socket)
 
         while True:
             try:
                 (client, (ip, port)) = listening_socket.accept()
 
             except socket.error as error:
-                if error.errno in (errno.EAGAIN, errno.EINPROGRESS):
+                if error.errno in (errno.EAGAIN, errno.EINPROGRESS, errno.EWOULDBLOCK):
                     continue
 
                 print "Listening thread socket error! ({})".format(errno.errorcode[error.errno])
                 return
 
-            self.connections["{}:{}".format(ip, port)] = client
+            listening_socket.setblocking(False)
 
-    def connect(self, ip, port, our_port=8000, use_ssl=False, timeout_seconds=120, connection_messages=()):
+            self.connections["{}:{}".format(ip, port)] = {"socket": client, "ssl": use_ssl}
+            listening_socket.settimeout(self.timeout_seconds)
+
+            for message in self.connection_messages:
+                self.send_data("{}:{}".format(ip, port), message)
+
+            time.sleep(0.15)
+
+    def connect(self, ip, port, our_port=8000, use_ssl=False):
         """Adds a connection to ip and our_port to the connections list.
         To access this address later, use the string key "<ip>:<our_port>" in the 'connections' dictionary."""
 
@@ -60,19 +72,24 @@ class SocketConnector(object):
                         errno.ECONNABORTED,
                         errno.EBUSY,
                         errno.ECONNRESET,
-                        errno.EADDRNOTAVAIL
+                        errno.EADDRNOTAVAIL,
                 ):
                     print "Error connecting to {}:{}: Socket error! ({})".format(
                         ip,
                         port,
                         errno.errorcode[error_code.errno]
                     )
+                    return False
+
+                continue
+
+            return True
 
         new_socket.setblocking(False)
-        new_socket.settimeout(timeout_seconds)
+        new_socket.settimeout(self.timeout_seconds)
         self.connections["{}:{}".format(ip, port)] = {"socket": new_socket, "ssl": use_ssl}
 
-        for message in connection_messages:
+        for message in self.connection_messages:
             self.send_data("{}:{}".format(ip, port), message)
 
     def send_data(self, address, data, blocking=True):
@@ -170,7 +187,15 @@ class SocketConnector(object):
 class SocketHelper(SocketConnector):
     """Helps connect with other sockets."""
 
-    def __init__(self, port=8000, use_ssl=False, timeout_seconds=120, helper_id="DefaultSocketHelper", addresses=()):
+    def __init__(
+            self,
+            port=8000,
+            use_ssl=False,
+            timeout_seconds=120,
+            helper_id="DefaultSocketHelper",
+            addresses=(),
+            connection_messages=()
+    ):
         """Initiates the helper.
 
         Arguments:
@@ -179,14 +204,15 @@ class SocketHelper(SocketConnector):
             -timeout_seconds: The timeout of the connections.
             -helper_id: A ID to help identify the socket helper.
             -addresses: A iterator containing addresses with the <ip>:<our_port> format."""
-        super(SocketHelper, self).__init__(port)
+        super(SocketHelper, self).__init__(port, timeout_seconds, connection_messages, use_ssl)
         self.receive_functions = []
         self.id = helper_id
 
         for address in addresses:
             ip, this_port = address.split(":")[:2]
 
-            self.connect(ip, this_port, port, use_ssl, timeout_seconds)
+            if not self.connect(ip, this_port, port, use_ssl):
+                print "Connection to {}:{} failed!".format(ip, this_port)
 
     def start_loop(self, loop_time):
         """Starts the Receiving Loop which is a loop used to call the receiving functions every time any connection

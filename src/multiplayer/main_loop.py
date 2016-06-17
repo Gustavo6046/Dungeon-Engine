@@ -25,9 +25,18 @@ class DMGPMultiplayer(object):
             port=self.port,
             use_ssl=self.use_ssl,
             timeout_seconds=self.timeout,
-            helper_id="Dungeon Engine Connection @ Port " + str(self.port)
+            helper_id="Dungeon Engine Connection @ Port " + str(self.port),
         )
+
+        self.connector.connection_messages = ["CONNECTEDCLIENTS " + " ".join(
+            ["{}:{}".format(ip, port) for ip, port in [x.split(":") for x in self.get_connected_clients()]]
+        )]
+
         self.connector.register_receive_function(self.parse_dmgp)
+
+    def get_connected_clients(self):
+        """A function used to get all the clients the game is connected to."""
+        return self.connector.connections.keys()
 
     def connect_to(self, ip, port):
         """Connects to a client in another address."""
@@ -37,8 +46,6 @@ class DMGPMultiplayer(object):
             port,
             self.use_ssl,
             self.timeout,
-            ["CONNECTEDCLIENTS " + " ".join(
-                ["{}:{}".format(ip, port) for ip, port in [x.split(":") for x in self.connector.connections.keys()]])]
         )
 
     def parse_dmgp(self, data, address, unused):

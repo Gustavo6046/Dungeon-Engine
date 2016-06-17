@@ -16,7 +16,13 @@ raw_connections = configuration.get("Game", "Connections")
 connections = []
 
 for line in raw_connections.split(" "):
-    connections.append((line.split(":")[0], int(line.split(":")[1])))
+    print "Adding {} to connection list...".format(line)
+
+    try:
+
+        connections.append((line.split(":")[0], int(line.split(":")[1])))
+    except IndexError:
+        pass
 
 for connection in connections:
     dmgp.connect_to(connection[0], connection[1])

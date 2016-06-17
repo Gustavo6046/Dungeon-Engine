@@ -63,7 +63,7 @@ def load_map(filename="intro"):
 
             if byte_kind == 0:
                 if current_parsing_position[1] > top_left[1] + map_height:
-                    current_parsing_position = (current_parsing_position[0], current_parsing_position[1] + 1)
+                    current_parsing_position = (current_parsing_position[0] + 1, current_parsing_position[1])
                     current_parsing_position = (current_parsing_position[0], top_left[1])
 
                     if current_parsing_position[0] == map_width + top_left[0]:
